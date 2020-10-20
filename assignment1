@@ -1,0 +1,51 @@
+import requests
+import pandas as pd
+import yfinance as yf
+import matplotlib.pyplot as plt
+
+#companies/tickers list
+companies = ['FB', 'AAPL', 'AMZN', 'IBM', 'GOOGL', 'MSFT', 'NAV', 'O', 'QCOM', 'TSLA']
+df = yf.download(companies,
+                   start="2010-01-01", end="2017-12-31", interval="1d")['Adj Close']
+
+
+#pull data for AAPL
+adj_close = df[['AAPL']].reset_index()
+
+#set Date as the Index
+adj_close.set_index('Date', inplace=True)
+adj_close.head()
+
+#starting the process to find moving averages
+adj_close["Diff"] = adj_close["AAPL"].diff()                                    #finding the difference of close prices for each day
+adj_close = adj_close[1:]                                                       #dropping the first row
+adj_close["Up"] = adj_close["Diff"].apply(lambda x: x if x > 0 else 0)          #finding the UP column
+adj_close["Down"] = adj_close["Diff"].apply(lambda x: abs(x) if x < 0 else 0)   #findign the DOWN column
+
+
+#exponential moving averages
+adj_close["RollUp"] = adj_close["Up"].ewm(span=14).mean()
+adj_close["RollDown"] = adj_close["Down"].ewm(span=14).mean()
+
+#Calculate Relative Strength
+adj_close["RelativeStrength"] = adj_close["RollUp"] / adj_close["RollDown"]
+
+#Calculate Relative Strength Index
+adj_close["RSI"] = 100-(100/ (1+ adj_close["RelativeStrength"]))
+
+
+
+#simple moving average method
+adj_close["SMA-RollUp"] = adj_close["Up"].rolling(14).mean()
+adj_close["SMA-RollDown"] = adj_close["Down"].rolling(14).mean()
+
+#Calculate Relative Strength
+adj_close["SMA-RelativeStrength"] = adj_close["SMA-RollUp"] / adj_close["SMA-RollDown"]
+#Calculate Relative Strength Index
+adj_close["SMA-RSI"] = 100-(100/ (1+ adj_close["SMA-RelativeStrength"]))
+
+#ChartSMA-RSI
+adj_close["SMA-RSI"].plot()
+
+#ChartEMA-RSI
+adj_close["RSI"].plot()
