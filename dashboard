@@ -1,0 +1,63 @@
+import pandas as pd
+import pandas_datareader as web
+import matplotlib.pyplot as plt
+
+#List to store my ticker codes
+ticker = []
+
+#n - to store number of stocks to analyse
+n = int(input("Enter the number of stocks between between 1-10: "))
+print("****************************************************************")
+
+
+#putting in a for loop here to prompt user based on the above^
+for i in range(0, n):
+    print("Choose number", i+1, "of the following stocks. \n FB \n AAPL \n AMZN \n IBM \n GOOGL \n MSFT \n NAV \n O \n QCOM \n TSLA")
+    print("****************************************************************")
+    item = input()
+    ticker.append(item)
+print("You have selected the following:", ticker)
+
+#future improvements to do validity checks for below variables
+wrsi = input('Choose EWMA or SMA to compute the Relative Strength Index value. ')
+mwa = int(input('Please enter the moving Window range: '))
+startdate = input('Please enter a start date for the chart between 2010-01-01 and 2017-12-31, in the format YYYY-MM-DD. ')
+enddate = input('Please enter a end date for the chart between 2010-01-01 and 2017-12-31, in the format YYYY-MM-DD. ')
+
+
+#pull data based on the parameters user input
+data = web.DataReader(ticker, 'yahoo', startdate, enddate)
+
+#this is where the RSI calculation goes
+#this code is reference from web, however, it is cleaner than what was taught in lesson, but the fundamental calculation remains
+delta = data['Adj Close'].diff(1)
+delta.dropna(inplace=True)
+
+positive = delta.copy()
+negative = delta.copy()
+
+positive[positive < 0] = 0
+negative[negative > 0] = 0
+
+#wrsi is ewma or sma?
+if wrsi == 'sma':
+    average_gain = positive.rolling(mwa).mean()
+    average_loss = abs(negative.rolling(mwa).mean())
+else:
+    average_gain = positive.ewm(span=mwa).mean()
+    average_loss = abs(negative.ewm(span=mwa).mean())
+    
+relative_strength = average_gain / average_loss
+RSI = 100-(100/ (1+ relative_strength))
+
+#Trying to show the charts properly with below code
+#Added lines to show RSI of 30 and 70
+for i, col in enumerate(RSI.columns):
+    ax1 = RSI[col].plot(figsize = (20,10))
+    ax1.axhline(0, linestyle='--', alpha=0.5, color='palegreen')
+    ax1.axhline(30, linestyle='--', alpha=0.5, color='lime')
+    ax1.axhline(70, linestyle='--', alpha=0.5, color='red')
+    ax1.axhline(100, linestyle='--', alpha=0.5, color='orange')
+    ax1.set_title("RSI")
+    ax1.legend()
+plt.xticks(rotation=0)
